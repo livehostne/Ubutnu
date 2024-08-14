@@ -10,7 +10,7 @@ jobs:
     - name: Set up SSH Server
       run: |
         sudo apt-get update
-        sudo apt-get install -y openssh-server wget jq
+        sudo apt-get install -y openssh-server wget jq dnsutils
         sudo systemctl enable ssh
         sudo systemctl start ssh
         # Set a password for the default user 'runner'
@@ -18,8 +18,8 @@ jobs:
 
     - name: Install ngrok
       run: |
-        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
-        tar xf ngrok-v3-stable-linux-amd64.tgz
+        wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
+        unzip ngrok-stable-linux-amd64.zip
         chmod +x ./ngrok
 
     - name: Authenticate ngrok
@@ -27,11 +27,16 @@ jobs:
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Expose SSH via ngrok
+    - name: Expose SSH via ngrok and resolve to IP
       run: |
         ./ngrok tcp 22 > /dev/null &
         sleep 5
-        curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+        NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+        NGROK_DOMAIN=$(echo $NGROK_URL | cut -d':' -f1 | cut -d'/' -f3)
+        NGROK_PORT=$(echo $NGROK_URL | cut -d':' -f2)
+        NGROK_IP=$(dig +short $NGROK_DOMAIN | tail -n1)
+        echo "Use this command to connect via SSH:"
+        echo "ssh runner@$NGROK_IP -p $NGROK_PORT"
 
     - name: Keep the job running
       run: sleep 1d
