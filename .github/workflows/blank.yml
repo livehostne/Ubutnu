@@ -1,28 +1,25 @@
-name: Ubuntu Desktop with VNC
+name: Ubuntu SSH Access
 
 on: [push, workflow_dispatch]
 
 jobs:
-  build:
+  setup-ssh:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Set up dependencies
+    - name: Set up SSH Server
       run: |
         sudo apt-get update
-        sudo apt-get install -y xfce4 xfce4-goodies tightvncserver wget
+        sudo apt-get install -y openssh-server wget jq
+        sudo systemctl enable ssh
+        sudo systemctl start ssh
+        # Set a password for the default user 'runner'
+        echo "runner:P@ssw0rd" | sudo chpasswd
 
-    - name: Start VNC server
+    - name: Install ngrok
       run: |
-        mkdir -p ~/.vnc
-        echo "P@ssw0rd" | vncpasswd -f > ~/.vnc/passwd
-        chmod 600 ~/.vnc/passwd
-        vncserver :1 -geometry 1280x800 -depth 24
-
-    - name: Download and set up ngrok
-      run: |
-        wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
-        unzip ngrok-stable-linux-amd64.zip
+        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+        tar xf ngrok-v3-stable-linux-amd64.tgz
         chmod +x ./ngrok
 
     - name: Authenticate ngrok
@@ -30,10 +27,10 @@ jobs:
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Expose VNC via ngrok
+    - name: Expose SSH via ngrok
       run: |
-        ./ngrok tcp 5901 &
-        sleep 2
+        ./ngrok tcp 22 > /dev/null &
+        sleep 5
         curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
 
     - name: Keep the job running
