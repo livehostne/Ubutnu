@@ -1,0 +1,40 @@
+name: Ubuntu Desktop with VNC
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Set up dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xfce4 xfce4-goodies tightvncserver wget
+
+    - name: Start VNC server
+      run: |
+        mkdir -p ~/.vnc
+        echo "P@ssw0rd" | vncpasswd -f > ~/.vnc/passwd
+        chmod 600 ~/.vnc/passwd
+        vncserver :1 -geometry 1280x800 -depth 24
+
+    - name: Download and set up ngrok
+      run: |
+        wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
+        unzip ngrok-stable-linux-amd64.zip
+        chmod +x ./ngrok
+
+    - name: Authenticate ngrok
+      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Expose VNC via ngrok
+      run: |
+        ./ngrok tcp 5901 &
+        sleep 2
+        curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+
+    - name: Keep the job running
+      run: sleep 1d
