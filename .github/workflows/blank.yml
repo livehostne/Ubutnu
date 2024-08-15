@@ -19,7 +19,7 @@ jobs:
     - name: Install ngrok
       run: |
         wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
-        tar xf ngrok-stable-linux-amd64.tgz
+        tar xf ngrok-stable-v3-linux-amd64.tgz
         chmod +x ./ngrok
 
     - name: Authenticate ngrok
