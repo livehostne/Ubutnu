@@ -13,25 +13,19 @@ jobs:
         sudo apt-get install -y openssh-server wget jq
         sudo systemctl enable ssh
         sudo systemctl start ssh
-        # Set a password for the default user 'runner'
         echo "runner:P@ssw0rd" | sudo chpasswd
 
-    - name: Install ngrok
+    - name: Install ZeroTier
       run: |
-        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
-        tar xf ngrok-v3-stable-linux-amd64.tgz
-        chmod +x ./ngrok
+        curl -s https://install.zerotier.com | sudo bash
+        sudo zerotier-cli join ${{ secrets.ZEROTIER_NETWORK_ID }}
 
-    - name: Authenticate ngrok
-      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-
-    - name: Expose SSH via ngrok
+    - name: Get ZeroTier IP
       run: |
-        ./ngrok tcp 22 > /dev/null &
-        sleep 5
-        curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+        sleep 10
+        zerotier-cli listpeers
+        ip=$(ip -4 -o addr show dev zt0 | awk '{split($4,a,"/");print a[1]}')
+        echo "ZeroTier IP: $ip"
 
     - name: Keep the job running
       run: sleep 1d
