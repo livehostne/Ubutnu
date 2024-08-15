@@ -1,22 +1,20 @@
-name: Ubuntu Desktop Access
+name: Ubuntu SSH Access
 
 on: [push, workflow_dispatch]
 
 jobs:
-  setup-remote-desktop:
+  setup-ssh:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Set up MATE Desktop Environment
+    - name: Set up SSH Server
       run: |
         sudo apt-get update
-        sudo apt-get install -y ubuntu-mate-desktop xrdp wget jq
-        sudo systemctl enable xrdp
-        sudo systemctl start xrdp
+        sudo apt-get install -y openssh-server wget jq
+        sudo systemctl enable ssh
+        sudo systemctl start ssh
         # Set a password for the default user 'runner'
         echo "runner:P@ssw0rd" | sudo chpasswd
-        # Configure xrdp to use the MATE session
-        echo "mate-session" > ~/.xsession
 
     - name: Install ngrok
       run: |
@@ -29,9 +27,9 @@ jobs:
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Expose XRDP via ngrok
+    - name: Expose SSH via ngrok
       run: |
-        ./ngrok tcp 3389 > /dev/null &
+        ./ngrok tcp 22 > /dev/null &
         sleep 5
         curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
 
