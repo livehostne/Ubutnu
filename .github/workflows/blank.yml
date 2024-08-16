@@ -1,3 +1,4 @@
+
 name: Windows RDP Access
 on: [push, workflow_dispatch]
 
@@ -15,9 +16,9 @@ jobs:
         run: |
           choco install 7zip notepadplusplus joytokey -y
 
-      - name: Install Lightweight Game (Minesweeper)
+      - name: Install Lightweight Game (SuperTuxKart)
         run: |
-          choco install winmine -y
+          choco install supertuxkart -y
 
       - name: Download and Install Ngrok
         run: |
