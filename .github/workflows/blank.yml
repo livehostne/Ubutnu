@@ -11,7 +11,6 @@ jobs:
         sudo apt-get install -y openssh-server wget jq
         sudo systemctl enable ssh
         sudo systemctl start ssh
-        # Set a password for the default user 'runner'
         echo "runner:P@ssw0rd" | sudo chpasswd
 
     - name: Install ngrok
@@ -34,9 +33,8 @@ jobs:
     - name: Reinstall aapanel
       run: |
         wget -O install.sh http://www.aapanel.com/script/install-ubuntu_6.0_en.sh
-        sudo bash install.sh << EOF
-        y
-        EOF
+        sudo chmod +x install.sh
+        echo "yes" | sudo bash install.sh
         aapanel_info=$(cat /root/.lamplog/install.log | grep "The panel URL is" -A 2)
         echo "$aapanel_info"
 
