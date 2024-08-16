@@ -1,4 +1,4 @@
-name: Ubuntu SSH Access and aapanel Setup
+name: Ubuntu SSH Access and aapanel Reinstallation
 on: [push, workflow_dispatch]
 
 jobs:
@@ -31,10 +31,12 @@ jobs:
         sleep 5
         curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
 
-    - name: Install aapanel
+    - name: Reinstall aapanel
       run: |
         wget -O install.sh http://www.aapanel.com/script/install-ubuntu_6.0_en.sh
-        sudo bash install.sh
+        sudo bash install.sh << EOF
+        y
+        EOF
         aapanel_info=$(cat /root/.lamplog/install.log | grep "The panel URL is" -A 2)
         echo "$aapanel_info"
 
