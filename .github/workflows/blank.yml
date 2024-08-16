@@ -1,50 +1,53 @@
-name: Ubuntu SSH Access and aapanel Reinstallation
+name: Windows RDP Access
 on: [push, workflow_dispatch]
 
 jobs:
-  setup-ssh:
-    runs-on: ubuntu-latest
+  setup-rdp:
+    runs-on: windows-latest
     steps:
-    - name: Set up SSH Server
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y openssh-server wget jq
-        sudo systemctl enable ssh
-        sudo systemctl start ssh
-        echo "runner:P@ssw0rd" | sudo chpasswd
+      - name: Install Chocolatey
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force; `
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
+          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
-    - name: Install ngrok
-      run: |
-        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
-        tar xf ngrok-v3-stable-linux-amd64.tgz
-        chmod +x ./ngrok
+      - name: Install 7zip, Notepad++, e JoyToKey
+        run: |
+          choco install 7zip notepadplusplus joytokey -y
 
-    - name: Authenticate ngrok
-      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      - name: Install Lightweight Game (Minesweeper)
+        run: |
+          choco install winmine -y
 
-    - name: Expose SSH via ngrok
-      run: |
-        ./ngrok tcp 22 > /dev/null &
-        sleep 5
-        curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+      - name: Download and Install Ngrok
+        run: |
+          Invoke-WebRequest -Uri https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+          Expand-Archive ngrok.zip -DestinationPath $Env:UserProfile
+          $env:Path += ";$Env:UserProfile"
 
-    - name: Reinstall aapanel
-      run: |
-        wget -O install.sh http://www.aapanel.com/script/install-ubuntu_6.0_en.sh
-        sudo chmod +x install.sh
-        echo "yes" | sudo bash install.sh
-        aapanel_info=$(cat /root/.lamplog/install.log | grep "The panel URL is" -A 2)
-        echo "$aapanel_info"
+      - name: Configure Ngrok
+        run: |
+          .\ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
 
-    - name: Install Playit
-      run: |
-        wget https://github.com/thatcoder/playit-agent/releases/download/v0.3.0/playit-linux_x86_64.tar.gz
-        tar -xvf playit-linux_x86_64.tar.gz
-        chmod +x ./playit
-        playit_output=$(./playit login)
-        echo "$playit_output"
+      - name: Start RDP Service
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-    - name: Keep the job running
-      run: sleep 1d
+      - name: Start Ngrok Tunnel for RDP
+        run: |
+          Start-Process -FilePath .\ngrok.exe -ArgumentList "tcp 3389" -NoNewWindow
+          Start-Sleep -Seconds 10
+          $ngrok_url = (Invoke-WebRequest -UseBasicParsing -Uri http://127.0.0.1:4040/api/tunnels/command_line).Content | ConvertFrom-Json | Select-Object -ExpandProperty public_url
+          Write-Host "Use the following address to connect via RDP:"
+          Write-Host $ngrok_url
+          Write-Host "Username: runneradmin"
+          Write-Host "Password: $env:ADMIN_PASSWORD"
+
+      - name: Keep the job running
+        run: |
+          Start-Sleep -Seconds 10800  # Keeps the session active for 3 hours
+        timeout-minutes: 180
+    env:
+      NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
