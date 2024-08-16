@@ -1,11 +1,9 @@
-name: Ubuntu SSH Access
-
+name: Ubuntu SSH Access and aapanel Setup
 on: [push, workflow_dispatch]
 
 jobs:
   setup-ssh:
     runs-on: ubuntu-latest
-
     steps:
     - name: Set up SSH Server
       run: |
@@ -13,26 +11,40 @@ jobs:
         sudo apt-get install -y openssh-server wget jq
         sudo systemctl enable ssh
         sudo systemctl start ssh
+        # Set a password for the default user 'runner'
         echo "runner:P@ssw0rd" | sudo chpasswd
 
-    - name: Install ZeroTier
+    - name: Install ngrok
       run: |
-        curl -s https://install.zerotier.com | sudo bash
-        sudo systemctl enable zerotier-one
-        sudo systemctl start zerotier-one
-        sleep 5
-        sudo zerotier-cli join ${{ secrets.ZEROTIER_NETWORK_ID }}
+        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+        tar xf ngrok-v3-stable-linux-amd64.tgz
+        chmod +x ./ngrok
 
-    - name: Get ZeroTier IP
+    - name: Authenticate ngrok
+      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Expose SSH via ngrok
       run: |
-        sleep 10
-        sudo zerotier-cli listpeers
-        ip=$(ip -4 -o addr show dev zt0 | awk '{split($4,a,"/");print a[1]}')
-        echo "ZeroTier IP: $ip"
-        
-    - name: Check ZeroTier Service Logs (Optional)
-      if: failure()
-      run: sudo journalctl -u zerotier-one
+        ./ngrok tcp 22 > /dev/null &
+        sleep 5
+        curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+
+    - name: Install aapanel
+      run: |
+        wget -O install.sh http://www.aapanel.com/script/install-ubuntu_6.0_en.sh
+        sudo bash install.sh
+        aapanel_info=$(cat /root/.lamplog/install.log | grep "The panel URL is" -A 2)
+        echo "$aapanel_info"
+
+    - name: Install Playit
+      run: |
+        wget https://github.com/thatcoder/playit-agent/releases/download/v0.3.0/playit-linux_x86_64.tar.gz
+        tar -xvf playit-linux_x86_64.tar.gz
+        chmod +x ./playit
+        playit_output=$(./playit login)
+        echo "$playit_output"
 
     - name: Keep the job running
       run: sleep 1d
