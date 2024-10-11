@@ -15,11 +15,13 @@ jobs:
         sudo systemctl start ssh
         # Set a password for the default user 'runner'
         echo "runner:P@ssw0rd" | sudo chpasswd
+        # Reinicia o serviço SSH
+        sudo systemctl restart ssh
 
     - name: Expose SSH via Serveo and resolve to IP
       run: |
         # Estabelece o túnel via Serveo
-        ssh -tt -o StrictHostKeyChecking=no -R 80:localhost:22 serveo.net > /dev/null &
+        ssh -tt -o StrictHostKeyChecking=no -N -R 80:localhost:22 serveo.net > /dev/null &
         sleep 5
         # Resolve a URL do túnel e extrai o domínio e porta
         SERVEO_DOMAIN="serveo.net"
