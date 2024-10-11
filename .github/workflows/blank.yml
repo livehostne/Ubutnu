@@ -30,11 +30,11 @@ jobs:
 
     - name: Authenticate LocalXpose
       run: |
-        /usr/local/bin/loclx authtoken ${{ secrets.LOCALXPOSE_AUTH_TOKEN }}
+        /usr/local/bin/loclx authtoken ${{ secrets.LOCALXPOSE_AUTH_TOKEN }} --headless
 
     - name: Expose SSH via LocalXpose
       run: |
-        /usr/local/bin/loclx tcp 22 > /dev/null &
+        /usr/local/bin/loclx tcp 22 --headless > /dev/null &
         sleep 5
         LOCALXPOSE_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
         LOCALXPOSE_DOMAIN=$(echo $LOCALXPOSE_URL | cut -d':' -f1 | cut -d'/' -f3)
