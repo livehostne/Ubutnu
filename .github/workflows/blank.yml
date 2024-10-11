@@ -18,14 +18,14 @@ jobs:
 
     - name: Expose SSH via Serveo and resolve to IP
       run: |
-        ssh -R 80:localhost:22 serveo.net > /dev/null &
+        # Estabelece o túnel via Serveo
+        ssh -tt -o StrictHostKeyChecking=no -R 80:localhost:22 serveo.net > /dev/null &
         sleep 5
-        SERVEO_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-        SERVEO_DOMAIN=$(echo $SERVEO_URL | cut -d':' -f1 | cut -d'/' -f3)
-        SERVEO_PORT=$(echo $SERVEO_URL | cut -d':' -f2)
+        # Resolve a URL do túnel e extrai o domínio e porta
+        SERVEO_DOMAIN="serveo.net"
         SERVEO_IP=$(dig +short $SERVEO_DOMAIN | tail -n1)
         echo "Use this command to connect via SSH:"
-        echo "ssh runner@$SERVEO_IP -p $SERVEO_PORT"
+        echo "ssh runner@$SERVEO_IP -p 22"  # Serveo utiliza a porta 22 para conexões SSH
 
     - name: Keep the job running
       run: sleep 1d
