@@ -18,16 +18,23 @@ jobs:
         # Reinicia o serviço SSH
         sudo systemctl restart ssh
 
-    - name: Expose SSH via Serveo and resolve to IP
+    - name: Expose SSH via Serveo and capture the URL
       run: |
-        # Estabelece o túnel via Serveo
-        ssh -tt -o StrictHostKeyChecking=no -N -R 80:localhost:22 serveo.net > /dev/null &
+        # Estabelece o túnel via Serveo e captura a saída
+        ssh -o StrictHostKeyChecking=no -R 80:localhost:22 serveo.net -N > serveo_output.txt 2>&1 &
         sleep 5
-        # Resolve a URL do túnel e extrai o domínio e porta
-        SERVEO_DOMAIN="serveo.net"
-        SERVEO_IP=$(dig +short $SERVEO_DOMAIN | tail -n1)
+        
+        # Lê a URL gerada a partir da saída
+        SERVEO_URL=$(grep -o 'https://.*\.serveo\.net' serveo_output.txt | tail -n1)
+        
+        # Verifica se a URL foi capturada
+        if [ -z "$SERVEO_URL" ]; then
+          echo "Failed to retrieve Serveo URL."
+          exit 1
+        fi
+        
         echo "Use this command to connect via SSH:"
-        echo "ssh runner@$SERVEO_IP -p 22"  # Serveo utiliza a porta 22 para conexões SSH
+        echo "ssh runner@$SERVEO_URL"
 
     - name: Keep the job running
       run: sleep 1d
