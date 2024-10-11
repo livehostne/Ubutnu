@@ -23,13 +23,18 @@ jobs:
         chmod +x loclx
         sudo mv loclx /usr/local/bin/
 
+    - name: Verify LocalXpose installation
+      run: |
+        which loclx
+        loclx version  # Verifica a versão para garantir que está instalado corretamente
+
     - name: Authenticate LocalXpose
       run: |
-        localxpose authtoken ${{ secrets.LOCALXPOSE_AUTH_TOKEN }}
+        /usr/local/bin/loclx authtoken ${{ secrets.LOCALXPOSE_AUTH_TOKEN }}
 
     - name: Expose SSH via LocalXpose
       run: |
-        ./loclx tcp 22 > /dev/null &
+        /usr/local/bin/loclx tcp 22 > /dev/null &
         sleep 5
         LOCALXPOSE_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
         LOCALXPOSE_DOMAIN=$(echo $LOCALXPOSE_URL | cut -d':' -f1 | cut -d'/' -f3)
