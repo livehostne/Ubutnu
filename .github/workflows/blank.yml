@@ -16,27 +16,16 @@ jobs:
         # Set a password for the default user 'runner'
         echo "runner:P@ssw0rd" | sudo chpasswd
 
-    - name: Install ngrok
+    - name: Expose SSH via Serveo and resolve to IP
       run: |
-        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
-        tar xf ngrok-v3-stable-linux-amd64.tgz
-        chmod +x ./ngrok
-
-    - name: Authenticate ngrok
-      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-
-    - name: Expose SSH via ngrok and resolve to IP
-      run: |
-        ./ngrok tcp 22 > /dev/null &
+        ssh -R 80:localhost:22 serveo.net > /dev/null &
         sleep 5
-        NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-        NGROK_DOMAIN=$(echo $NGROK_URL | cut -d':' -f1 | cut -d'/' -f3)
-        NGROK_PORT=$(echo $NGROK_URL | cut -d':' -f2)
-        NGROK_IP=$(dig +short $NGROK_DOMAIN | tail -n1)
+        SERVEO_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+        SERVEO_DOMAIN=$(echo $SERVEO_URL | cut -d':' -f1 | cut -d'/' -f3)
+        SERVEO_PORT=$(echo $SERVEO_URL | cut -d':' -f2)
+        SERVEO_IP=$(dig +short $SERVEO_DOMAIN | tail -n1)
         echo "Use this command to connect via SSH:"
-        echo "ssh runner@$NGROK_IP -p $NGROK_PORT"
+        echo "ssh runner@$SERVEO_IP -p $SERVEO_PORT"
 
     - name: Keep the job running
       run: sleep 1d
