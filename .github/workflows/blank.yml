@@ -7,33 +7,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
     - name: Set up SSH Server
       run: |
         sudo apt-get update
-        sudo apt-get install -y openssh-server npm
-        sudo npm install -g localtunnel
+        sudo apt-get install -y openssh-server
         sudo systemctl enable ssh
         sudo systemctl start ssh
-        # Set a password for the default user 'runner'
-        echo "runner:P@ssw0rd" | sudo chpasswd
-        # Reinicia o serviço SSH
-        sudo systemctl restart ssh
+        echo "runner:P@ssw0rd" | sudo chpasswd # Define a senha 'P@ssw0rd' para o usuário 'runner'
 
-    - name: Expose SSH via LocalTunnel
-      id: expose
+    - name: Install LocalXpose
+      uses: localxpose/cli@v1.6.0
+      with:
+        # Configure LocalXpose to expose port 22 (SSH)
+        services: '22:ssh'
+
+    - name: Get SSH Connection Information
+      id: get-ssh-info
+      uses: localxpose/cli@v1.6.0
+      with:
+        command: info
+
+    - name: Print SSH Connection Command
       run: |
-        # Estabelece o túnel via LocalTunnel e captura a URL
-        SERVEO_URL=$(lt -p 22 --print-requests | grep -o 'https://.*\.loca.lt' | tail -n1 &)
-        sleep 5
-        
-        # Verifica se a URL foi capturada
-        if [ -z "$SERVEO_URL" ]; then
-          echo "Failed to retrieve LocalTunnel URL."
-          exit 1
-        fi
-        
-        echo "Use this command to connect via SSH:"
-        echo "ssh runner@$SERVEO_URL"
+        echo "Connecting to SSH server..."
+        echo "ssh runner@${{ steps.get-ssh-info.outputs.host }} -p ${{ steps.get-ssh-info.outputs.port }}"
 
-    - name: Keep the job running
-      run: sleep 1d
+    # Keep the workflow running to maintain the connection
+    - name: Keep Job Alive
+      run: sleep 1d 
