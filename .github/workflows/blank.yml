@@ -7,34 +7,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
     - name: Set up SSH Server
       run: |
         sudo apt-get update
-        sudo apt-get install -y openssh-server
+        sudo apt-get install -y openssh-server wget jq dnsutils
         sudo systemctl enable ssh
         sudo systemctl start ssh
-        echo "runner:P@ssw0rd" | sudo chpasswd # Define a senha 'P@ssw0rd' para o usuário 'runner'
+        # Set a password for the default user 'runner'
+        echo "runner:P@ssw0rd" | sudo chpasswd
 
     - name: Install LocalXpose
-      uses: localxpose/cli@v1.6.0
-      with:
-        # Configure LocalXpose to expose port 22 (SSH)
-        services: '22:ssh'
-
-    - name: Get SSH Connection Information
-      id: get-ssh-info
-      uses: localxpose/cli@v1.6.0
-      with:
-        command: info
-
-    - name: Print SSH Connection Command
       run: |
-        echo "Connecting to SSH server..."
-        echo "ssh runner@${{ steps.get-ssh-info.outputs.host }} -p ${{ steps.get-ssh-info.outputs.port }}"
+        wget https://localxpose.io/downloads/localxpose-linux-amd64.zip
+        unzip localxpose-linux-amd64.zip
+        chmod +x localxpose
+        sudo mv localxpose /usr/local/bin/
 
-    # Keep the workflow running to maintain the connection
-    - name: Keep Job Alive
-      run: sleep 1d 
+    - name: Authenticate LocalXpose
+      run: |
+        localxpose authtoken ${{ secrets.LOCALXPOSE_AUTH_TOKEN }}
+
+    - name: Expose SSH via LocalXpose
+      run: |
+        ./localxpose tcp 22 > /dev/null &
+        sleep 5
+        LOCALXPOSE_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+        LOCALXPOSE_DOMAIN=$(echo $LOCALXPOSE_URL | cut -d':' -f1 | cut -d'/' -f3)
+        LOCALXPOSE_PORT=$(echo $LOCALXPOSE_URL | cut -d':' -f2)
+        echo "Use this command to connect via SSH:"
+        echo "ssh runner@$LOCALXPOSE_DOMAIN -p $LOCALXPOSE_PORT"
+
+    - name: Keep the job running
+      run: sleep 1d
