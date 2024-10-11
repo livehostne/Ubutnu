@@ -20,8 +20,8 @@ jobs:
       run: |
         wget https://loclx-client.s3.amazonaws.com/loclx-linux-amd64.zip
         unzip loclx-linux-amd64.zip
-        chmod +x localxpose
-        sudo mv localxpose /usr/local/bin/
+        chmod +x loclx
+        sudo mv loclx /usr/local/bin/
 
     - name: Authenticate LocalXpose
       run: |
@@ -29,7 +29,7 @@ jobs:
 
     - name: Expose SSH via LocalXpose
       run: |
-        ./localxpose tcp 22 > /dev/null &
+        ./loclx tcp 22 > /dev/null &
         sleep 5
         LOCALXPOSE_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
         LOCALXPOSE_DOMAIN=$(echo $LOCALXPOSE_URL | cut -d':' -f1 | cut -d'/' -f3)
