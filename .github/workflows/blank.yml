@@ -18,8 +18,8 @@ jobs:
 
     - name: Install LocalXpose
       run: |
-        wget https://localxpose.io/downloads/localxpose-linux-amd64.zip
-        unzip localxpose-linux-amd64.zip
+        wget https://loclx-client.s3.amazonaws.com/loclx-linux-amd64.zip
+        unzip loclx-linux-amd64.zip
         chmod +x localxpose
         sudo mv localxpose /usr/local/bin/
 
